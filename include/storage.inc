@@ -1,7 +1,7 @@
 #if defined _storage_included
  #endinput
 #endif
-#define _ccp_storage_included
+#define _storage_included
 
 native Handle   storage_ReadValue(int iClient, const char[] key);
 native bool     storage_WriteValue(int iClient, const char[] key, Handle value);
