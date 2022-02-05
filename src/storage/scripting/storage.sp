@@ -27,14 +27,19 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 public any Native_Write(Handle h, int a) {
     int iClient = GetNativeCell(1);
 
-    if(!jConfig)
+    if(!jConfig || !(getAuth(iClient))[0])
         return false;
 
     Json storage;
-    if(!(storage = getStorage(iClient))) {
-        storage = new Json("{}");
-        asJSONO(storage).SetInt("expired", (iClient) ? (GetTime() + jConfig.GetInt("duration")) : -1);
-    }
+    if(!(storage = getStorage(iClient)))
+        storage = (new JsonBuilder("{}"))
+                    .SetInt(
+                        "expired", 
+                        (iClient) 
+                            ? (GetTime() + jConfig.GetInt("duration")) 
+                            : -1
+                    )
+                    .Build();
     
     char key[64];
     GetNativeString(2, key, sizeof(key));
@@ -52,7 +57,7 @@ public any Native_Read(Handle h, int a) {
     int iClient = GetNativeCell(1);
 
     Json storage;
-    if((storage = getStorage(iClient)) == null)
+    if(!(storage = getStorage(iClient)))
         return storage;
     
     char key[64];
@@ -63,9 +68,7 @@ public any Native_Read(Handle h, int a) {
         return storage;
     }
 
-    Json value;
-
-    value = asJSONO(storage).Get(key);
+    Json value = asJSONO(storage).Get(key);
     delete storage;
 
     return value;
@@ -76,7 +79,7 @@ public any Native_Remove(Handle h, int a) {
 
     Json storage;
 
-    if((storage = getStorage(iClient)) == null)
+    if(!(storage = getStorage(iClient)))
         return false;
     
     char key[64];
@@ -112,16 +115,19 @@ public void OnMapStart() {
 }
 
 public void OnClientPutInServer(int iClient) {
-    static char path[PLATFORM_MAX_PATH];
-    path = getClientStoragePath(getAuth(iClient));
 
     Json storage;
-    if((storage = getStorage(iClient)) == null)
+    if(!(storage = getStorage(iClient)))
         return;
 
-    asJSONO(storage).SetInt("expired", (iClient) ? (GetTime() + jConfig.GetInt("duration")) : -1);
+    asJSONO(storage).SetInt(
+        "expired", 
+        (iClient) 
+            ? (GetTime() + jConfig.GetInt("duration")) 
+            : -1
+    );
 
-    storage.ToFile(path, 0);
+    storage.ToFile(getClientStoragePath(getAuth(iClient)), 0);
     delete storage;
 
     if(lastClean <= GetGameTickCount()) {
@@ -130,13 +136,17 @@ public void OnClientPutInServer(int iClient) {
     }
 }
 
-stock char[] getAuth(int iClient) {
+stock char[] getAuth(int iClient) 
+{
     char auth[66];
-    GetClientAuthId(iClient, AuthId_Engine, auth, sizeof(auth));
+    if(!GetClientAuthId(iClient, AuthId_Engine, auth, sizeof(auth)))
+        auth = NULL_STRING;
+
     return auth;
 }
 
-char[] getClientStoragePath(const char[] auth) {
+char[] getClientStoragePath(const char[] auth) 
+{
     static char buffer[PLATFORM_MAX_PATH];
     strcopy(buffer, sizeof(buffer), auth);
 
@@ -149,14 +159,15 @@ char[] getClientStoragePath(const char[] auth) {
     return buffer;
 }
 
-stock Json getStorage(int iClient) {
-    char path[PLATFORM_MAX_PATH];
-    path = getClientStoragePath(getAuth(iClient));
-
-    if(!FileExists(path))
+stock Json getStorage(int iClient) 
+{
+    if(!(getAuth(iClient))[0])
         return null;
 
-    return Json.JsonF(path, 0);
+    if(!FileExists(getClientStoragePath(getAuth(iClient))))
+        return null;
+
+    return Json.JsonF(getClientStoragePath(getAuth(iClient)), 0);
 }
 
 char[] getLocation() {
@@ -171,7 +182,8 @@ char[] getLocation() {
     return location;
 }
 
-int GetTicks() {
+int GetTicks() 
+{
     return RoundFloat(1/GetTickInterval());
 }
 
@@ -197,7 +209,9 @@ void CleanStoragePath() {
         if(!(jsObject = asJSONO(Json.JsonF(path, 0))))
             continue;
 
-        time = (jsObject.HasKey("expired")) ? jsObject.GetInt("expired") : 0;
+        time = (jsObject.HasKey("expired")) 
+                    ? jsObject.GetInt("expired") 
+                    : 0;
         
         if(time != -1 && GetTime() >= time)
             DeleteFile(path);
