@@ -10,7 +10,7 @@ native bool     storage_RemoveValue(int iClient, const char[] key);
 
 public SharedPlugin __pl_storage= 
 {
-    name = "Storage",
+    name = "storage",
     file = "storage.smx",
 #if defined REQUIRE_PLUGIN
     required = 1
