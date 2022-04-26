@@ -125,6 +125,9 @@ public void pckg_OnPackageAvailable(int iClient)
 
     Json storage = getStorage(iClient);
 
+    if(!storage)
+        return;
+
     asJSONO(storage).SetInt(
         "expired",
         ((iClient) 
