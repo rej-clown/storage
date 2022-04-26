@@ -1,18 +1,18 @@
 #pragma newdecls required
 
 #include <jansson>
+#include <packager>
 
 public Plugin myinfo = 
 {
 	name = "Storage [json]",
 	author = "rej.chev?",
 	description = "...",
-	version = "1.1.0",
+	version = "1.2.0",
 	url = "discord.gg/ChTyPUG"
 };
 
 JsonObject jConfig;
-int lastClean;
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 { 
@@ -27,43 +27,47 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 public any Native_Write(Handle h, int a) {
     int iClient = GetNativeCell(1);
 
-    if(!jConfig || !(getAuth(iClient))[0])
+    Json storage;
+    if(!Packager.HasPackage(iClient) || !jConfig)
         return false;
 
-    Json storage;
-    if(!(storage = getStorage(iClient)))
+    storage = getStorage(iClient);
+
+    if(!storage)
         storage = (new JsonBuilder("{}"))
                     .SetInt(
                         "expired", 
-                        (iClient) 
+                        ((iClient) 
                             ? (GetTime() + jConfig.GetInt("duration")) 
-                            : -1
+                            : -1)
                     )
                     .Build();
     
     char key[64];
     GetNativeString(2, key, sizeof(key));
 
-    Json value = asJSON(GetNativeCell(3));
-
-    asJSONO(storage).Set(key, value);
+    asJSONO(storage).Set(key, asJSON(GetNativeCell(3)));
     storage.ToFile(getClientStoragePath(getAuth(iClient)), 0);
 
     delete storage;
-    return 1;
+    return true;
 }
 
 public any Native_Read(Handle h, int a) {
     int iClient = GetNativeCell(1);
 
     Json storage;
-    if(!(storage = getStorage(iClient)))
+    if(!Packager.HasPackage(iClient))
+        return storage;
+
+    storage = getStorage(iClient);
+    if(!storage)
         return storage;
     
     char key[64];
     GetNativeString(2, key, sizeof(key));
 
-    if(!asJSONO(storage).HasKey(key)) {
+    if(!asJSONO(storage).HasKey(key) || (!JSONO_TYPE_EQUAL(storage, key, JSON_ARRAY) && !JSONO_TYPE_EQUAL(storage, key, JSON_OBJECT))) {
         delete storage;
         return storage;
     }
@@ -78,9 +82,12 @@ public any Native_Remove(Handle h, int a) {
     int iClient = GetNativeCell(1);
 
     Json storage;
+    if(!Packager.HasPackage(iClient))
+        return storage;
 
-    if(!(storage = getStorage(iClient)))
-        return false;
+    storage = getStorage(iClient);
+    if(!storage)
+        return storage;
     
     char key[64];
     GetNativeString(2, key, sizeof(key));
@@ -97,52 +104,51 @@ public any Native_Remove(Handle h, int a) {
     return true;
 }
 
-public void OnMapStart() {
-    if(jConfig)
-        delete jConfig;
-    
-    static char obj[PLATFORM_MAX_PATH]  = "configs/storage/settings.json";
 
-    if(obj[0] == 'c')
-        BuildPath(Path_SM, obj, sizeof(obj), obj);
-    
-    if(!FileExists(obj))
-        SetFailState("Config file is not exists: %s", obj);
+public void pckg_OnPackageAvailable(int iClient)
+{
+    if(!iClient)
+    {
+        if(jConfig)
+            delete jConfig;
+        
+        static char obj[PLATFORM_MAX_PATH]  = "configs/storage/settings.json";
 
-    jConfig = asJSONO(Json.JsonF(obj, 0));
+        if(obj[0] == 'c')
+            BuildPath(Path_SM, obj, sizeof(obj), obj);
+        
+        if(!FileExists(obj))
+            SetFailState("Config file is not exists: %s", obj);
 
-    lastClean = GetGameTickCount();
-}
+        jConfig = asJSONO(Json.JsonF(obj, 0));
+    }
 
-public void OnClientPutInServer(int iClient) {
-
-    Json storage;
-    if(!(storage = getStorage(iClient)))
-        return;
+    Json storage = getStorage(iClient);
 
     asJSONO(storage).SetInt(
-        "expired", 
-        (iClient) 
-            ? (GetTime() + jConfig.GetInt("duration")) 
-            : -1
+        "expired",
+        ((iClient) 
+            ? (GetTime() + jConfig.GetInt("duration"))
+            : -1)
     );
 
     storage.ToFile(getClientStoragePath(getAuth(iClient)), 0);
     delete storage;
 
-    if(lastClean <= GetGameTickCount()) {
-        lastClean = GetGameTickCount() + (10 * GetTicks());
+    if(!iClient)
         CleanStoragePath();
-    }
 }
 
 stock char[] getAuth(int iClient) 
 {
-    char auth[66];
-    if(!GetClientAuthId(iClient, AuthId_Engine, auth, sizeof(auth)))
-        auth = NULL_STRING;
+    char szAuth[66];
+    JsonObject clientPackage;
+    if((clientPackage = Packager.GetPackage(iClient)))
+        clientPackage.GetString("auth", szAuth, sizeof(szAuth));
 
-    return auth;
+    delete clientPackage;
+
+    return szAuth;
 }
 
 char[] getClientStoragePath(const char[] auth) 
@@ -161,13 +167,17 @@ char[] getClientStoragePath(const char[] auth)
 
 stock Json getStorage(int iClient) 
 {
-    if(!(getAuth(iClient))[0])
-        return null;
+    Json j = null;
 
-    if(!FileExists(getClientStoragePath(getAuth(iClient))))
-        return null;
+    if(FileExists(getClientStoragePath(getAuth(iClient))))
+        j = Json.JsonF(getClientStoragePath(getAuth(iClient)), 0);
+    
+    return j;
+}
 
-    return Json.JsonF(getClientStoragePath(getAuth(iClient)), 0);
+stock bool IsVerified(int iClient)
+{
+    return true;
 }
 
 char[] getLocation() {
@@ -182,37 +192,34 @@ char[] getLocation() {
     return location;
 }
 
-int GetTicks() 
-{
-    return RoundFloat(1/GetTickInterval());
-}
-
 void CleanStoragePath() {
     DirectoryListing dirs;
     if(!(dirs = OpenDirectory(getLocation())))
         return;
 
-    static int time;
-    static JsonObject jsObject;
-    static FileType type;
-    static char path[PLATFORM_MAX_PATH];
+    int time;
+    JsonObject jsObject;
+    FileType type;
+    char path[PLATFORM_MAX_PATH];
 
     while(ReadDirEntry(dirs, path, sizeof(path), type)) {
+        time = 0;
+
         if(type != FileType_File || path[0] == '.')
             continue;
 
-        if(StrContains(path, "example", false) != -1)
+        if(StrContains(path, "example", false) != -1 || strncmp(path[strlen(path) - strlen(".json")], ".json", strlen(".json")) != 0)
             continue;
 
         Format(path, sizeof(path), "%s/%s", getLocation(), path);
 
-        if(!(jsObject = asJSONO(Json.JsonF(path, 0))))
+        jsObject = asJSONO(Json.JsonF(path, 0));
+        if(!jsObject)
             continue;
 
-        time = (jsObject.HasKey("expired")) 
-                    ? jsObject.GetInt("expired") 
-                    : 0;
-        
+        if(jsObject.HasKey("expired") && JSONO_TYPE_EQUAL(jsObject, "expired", JSON_INTEGER))
+            time = jsObject.GetInt("expired");
+    
         if(time != -1 && GetTime() >= time)
             DeleteFile(path);
 
