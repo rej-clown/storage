@@ -8,11 +8,11 @@ public Plugin myinfo =
 	name = "Storage [json]",
 	author = "rej.chev?",
 	description = "...",
-	version = "1.2.0",
+	version = "1.3.0",
 	url = "discord.gg/ChTyPUG"
 };
 
-JsonObject jConfig;
+static const char artifact[] = "json_storage";
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 { 
@@ -24,11 +24,12 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
     return APLRes_Success
 }
 
-public any Native_Write(Handle h, int a) {
+public any Native_Write(Handle h, int a) 
+{
     int iClient = GetNativeCell(1);
 
     Json storage;
-    if(!Packager.HasPackage(iClient) || !jConfig)
+    if(!Packager.HasPackage(iClient))
         return false;
 
     storage = getStorage(iClient);
@@ -38,7 +39,7 @@ public any Native_Write(Handle h, int a) {
                     .SetInt(
                         "expired", 
                         ((iClient) 
-                            ? (GetTime() + jConfig.GetInt("duration")) 
+                            ? (GetTime() + GetDuration()) 
                             : -1)
                     )
                     .Build();
@@ -104,14 +105,10 @@ public any Native_Remove(Handle h, int a) {
     return true;
 }
 
-
 public void pckg_OnPackageAvailable(int iClient)
 {
     if(!iClient)
     {
-        if(jConfig)
-            delete jConfig;
-        
         static char obj[PLATFORM_MAX_PATH]  = "configs/storage/settings.json";
 
         if(obj[0] == 'c')
@@ -120,7 +117,10 @@ public void pckg_OnPackageAvailable(int iClient)
         if(!FileExists(obj))
             SetFailState("Config file is not exists: %s", obj);
 
-        jConfig = asJSONO(Json.JsonF(obj, 0));
+        JsonObject jConfig = asJSONO(Json.JsonF(obj, 0));
+
+        Packager.SetArtifact(iClient, artifact, jConfig);
+        delete jConfig;
     }
 
     Json storage = getStorage(iClient);
@@ -131,7 +131,7 @@ public void pckg_OnPackageAvailable(int iClient)
     asJSONO(storage).SetInt(
         "expired",
         ((iClient) 
-            ? (GetTime() + jConfig.GetInt("duration"))
+            ? (GetTime() + GetDuration())
             : -1)
     );
 
@@ -176,11 +176,6 @@ stock Json getStorage(int iClient)
         j = Json.JsonF(getClientStoragePath(getAuth(iClient)), 0);
     
     return j;
-}
-
-stock bool IsVerified(int iClient)
-{
-    return true;
 }
 
 char[] getLocation() {
@@ -230,4 +225,17 @@ void CleanStoragePath() {
     }
 
     delete dirs;
+}
+
+stock int GetDuration()
+{
+    int duration;
+
+    Json o;
+    if(Packager.HasArtifact(0, artifact) && (o = asJSON(Packager.GetArtifact(0, artifact))))
+        duration = asJSONO(o).GetInt("duration");
+
+    delete o;
+
+    return duration;
 }

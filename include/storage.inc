@@ -3,10 +3,9 @@
 #endif
 #define _storage_included
 
-native Handle   storage_ReadValue(int iClient, const char[] key);
-native bool     storage_WriteValue(int iClient, const char[] key, Handle value);
+native Json     storage_ReadValue(int iClient, const char[] key);
+native bool     storage_WriteValue(int iClient, const char[] key, Json value);
 native bool     storage_RemoveValue(int iClient, const char[] key);
-
 
 public SharedPlugin __pl_storage= 
 {
