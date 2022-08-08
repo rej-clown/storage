@@ -8,7 +8,7 @@ public Plugin myinfo =
 	name = "Storage [json]",
 	author = "rej.chev?",
 	description = "...",
-	version = "1.3.0",
+	version = "1.4.0",
 	url = "discord.gg/ChTyPUG"
 };
 
@@ -145,9 +145,9 @@ public void pckg_OnPackageAvailable(int iClient)
 stock char[] getAuth(int iClient) 
 {
     char szAuth[66];
-    JsonObject clientPackage;
+    Json clientPackage;
     if((clientPackage = Packager.GetPackage(iClient)))
-        clientPackage.GetString("auth", szAuth, sizeof(szAuth));
+        asJSONO(clientPackage).GetString("auth", szAuth, sizeof(szAuth));
 
     delete clientPackage;
 
@@ -190,7 +190,8 @@ char[] getLocation() {
     return location;
 }
 
-void CleanStoragePath() {
+void CleanStoragePath() 
+{
     DirectoryListing dirs;
     if(!(dirs = OpenDirectory(getLocation())))
         return;

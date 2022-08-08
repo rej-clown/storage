@@ -3,8 +3,35 @@
 #endif
 #define _storage_included
 
+/*
+ * @desc 
+ * 
+ * @param iClient   - Client index
+ * @param key       - Key
+ *
+ * @return Json object(must be freed) or null
+ */
 native Json     storage_ReadValue(int iClient, const char[] key);
+
+/*
+ * @desc 
+ * 
+ * @param iClient   - Client index
+ * @param key       - Key
+ * @param value     - Json object with any data
+ *
+ * @return true on success
+ */
 native bool     storage_WriteValue(int iClient, const char[] key, Json value);
+
+/*
+ * @desc 
+ * 
+ * @param iClient   - Client index
+ * @param key       - Key
+ *
+ * @return true on success?
+ */
 native bool     storage_RemoveValue(int iClient, const char[] key);
 
 public SharedPlugin __pl_storage= 
