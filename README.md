@@ -1,9 +1,9 @@
 <h1 align="center">Data storage</h1>
 <p align="center">
     <img src="https://app.travis-ci.com/rej-clown/storage.svg?branch=main" />
-    <a href="#requirements"><img src="https://img.shields.io/badge/sourcemod-v.1.10-blue" /></a>
+    <a href="#requirements"><img src="https://img.shields.io/badge/sourcemod-v.1.11-blue" /></a>
     <a href="https://discord.gg/cFZ97Mzrjy" target="_blank"><img src="https://img.shields.io/discord/494942123548868609" /></a>
-    <img src="https://img.shields.io/github/downloads/rej-clown/storage/total" />
+    <!-- <img src="https://img.shields.io/github/downloads/rej-clown/storage/total" /> -->
 </p>
 
 ___
@@ -14,7 +14,7 @@ The simple data storage based on json
 
 ## Requirements:
 -------------
-- Sourcemod 1.10 ([Windows](http://sourcemod.net/latest.php?os=windows&version=1.10) | [Linux](http://sourcemod.net/latest.php?os=linux&version=1.10))
+- Sourcemod 1.11 ([Windows](http://sourcemod.net/latest.php?os=windows&version=1.11) | [Linux](http://sourcemod.net/latest.php?os=linux&version=1.11))
 - [Jansson](https://github.com/rej-clown/sm-jansson/releases)
 - [Packager](https://github.com/rej-clown/packager)
 
