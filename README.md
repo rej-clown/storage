@@ -16,7 +16,6 @@ The simple data storage based on json
 -------------
 - Sourcemod 1.11 ([Windows](http://sourcemod.net/latest.php?os=windows&version=1.11) | [Linux](http://sourcemod.net/latest.php?os=linux&version=1.11))
 - [Jansson](https://github.com/rej-clown/sm-jansson/releases)
-- [Packager](https://github.com/rej-clown/packager)
 
 ## Game support
 ---------
