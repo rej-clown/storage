@@ -7,7 +7,7 @@ public Plugin myinfo =
 	name = "Storage [json]",
 	author = "rej.chev?",
 	description = "...",
-	version = "2.0.0",
+	version = "2.0.1",
 	url = "discord.gg/ChTyPUG"
 };
 
@@ -123,20 +123,24 @@ Action OnStorageExpired(const GlobalForward fwd, Storage& storage)
 }
 
 public void OnMapStart() {
-    static char config[PLATFORM_MAX_PATH] = "configs/storage/settings.json";
+    
+    static char path[PLATFORM_MAX_PATH] = "configs/storage/settings.json";
 
-    if(config[0] == 'c')
-        BuildPath(Path_SM, config, sizeof(config), config);
-
-    if(!FileExists(config))
-        SetFailState("Where is my config: '%s'", config);
-
+    if(path[0] == 'c')
+        BuildPath(Path_SM, path, sizeof(path), "%s", path);
+    
     Json json;
+    char error[PLATFORM_MAX_PATH];
 
-    if((json = Json.JsonF(config)))
-        iDuration = asJSONO(json).GetInt("duration", true);
+    if(!(json = Json.JsonF(path, 0, error, sizeof(error)))) {
 
-    delete json;
+        if(error[0])
+            SetFailState(error);
+
+        return;
+    }
+
+    iDuration = asJSONO(json).GetInt("duration", true);
 
     CleanStorages();
 }
@@ -163,8 +167,7 @@ void CleanStorages()  {
     char path[PLATFORM_MAX_PATH];
 
     while(ReadDirEntry(dirs, path, sizeof(path), type)) {
-        time = 0;
-
+        
         if(type != FileType_File || path[0] == '.')
             continue;
 

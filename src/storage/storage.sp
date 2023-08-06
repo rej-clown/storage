@@ -15,6 +15,8 @@ enum FreeEvent_s {
     freeAnyway
 }
 
+#define JSON_INCLUDE_BUILDER
+
 #include <jansson>
 
 methodmap Storage < Handle {
@@ -25,11 +27,17 @@ methodmap Storage < Handle {
         BuildPath(Path_SM, path, sizeof(path), "%s/%s.json", location, cleanAuth(auth));
 
         Json storage;
-        if((storage = Json.JsonF(path, 0, error, mlen))) {
-            asJSONO(storage).SetInt("expired", GetTime() + duration);
-            asJSONO(storage).SetString("path", path);
+        if(!(storage = Json.JsonF(path, 0, error, mlen))) {
+            storage = new Json("{}");
         }
-            
+
+        asJSONB(storage)
+            .SetInt("expired", GetTime() + duration)
+            .SetString("path", path);
+        
+        if(!storage.ToFile(path))
+            LogMessage("Failed on write to: %s", path);
+
         return view_as<Storage>(storage);
     }
 
